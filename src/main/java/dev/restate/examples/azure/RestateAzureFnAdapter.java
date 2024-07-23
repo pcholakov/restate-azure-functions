@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -40,17 +41,17 @@ public class RestateAzureFnAdapter {
     public RestateAzureFnAdapter() {
         this.restateEndpoint = RestateEndpoint.newBuilder(EndpointManifestSchema.ProtocolMode.REQUEST_RESPONSE)
                 // .withRequestIdentityVerifier(...) // TODO: required to protect handlers from unauthorized invocations
-                .bind(new GreeterObject())
+                .bind(RestateEndpoint.discoverServiceDefinitionFactory(new GreeterObject()).create(new GreeterObject()), null)
                 .build();
     }
 
-    @FunctionName("HttpExample")
+    @FunctionName("restate")
     public HttpResponseMessage run(
             @HttpTrigger(name = "restateEndpoint", methods = {HttpMethod.POST}, authLevel = AuthorizationLevel.ANONYMOUS)
-            HttpRequestMessage<Optional<byte[]>> request,
+            HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
 
-        context.getLogger().info("Delegating request to Restate endpoint.");
+        context.getLogger().info("Delegating request to Restate endpoint: " + request.getUri().getPath());
 
         String requestPath = request.getUri().getPath();
         String path = requestPath.endsWith("/")
@@ -73,7 +74,7 @@ public class RestateAzureFnAdapter {
         }
     }
 
-    private HttpResponseMessage handleInvoke(HttpRequestMessage<Optional<byte[]>> request, Logger logger) {
+    private HttpResponseMessage handleInvoke(HttpRequestMessage<Optional<String>> request, Logger logger) {
         // Parse request
         String[] pathSegments = SLASH.split(request.getUri().getPath());
         if (pathSegments.length < 3
@@ -101,7 +102,7 @@ public class RestateAzureFnAdapter {
             return request.createResponseBuilder(HttpStatus.valueOf(e.getCode())).build();
         }
 
-        BufferedPublisher publisher = new BufferedPublisher(ByteBuffer.wrap(request.getBody().orElseThrow()));
+        BufferedPublisher publisher = new BufferedPublisher(ByteBuffer.wrap(request.getBody().orElseThrow().getBytes(StandardCharsets.UTF_8)));
         ResultSubscriber subscriber = new ResultSubscriber();
 
         // Wire handler
@@ -127,7 +128,7 @@ public class RestateAzureFnAdapter {
                 .body(responseBody).build();
     }
 
-    private HttpResponseMessage handleDiscovery(HttpRequestMessage<Optional<byte[]>> request) {
+    private HttpResponseMessage handleDiscovery(HttpRequestMessage<Optional<String>> request) {
         RestateEndpoint.DiscoveryResponse discoveryResponse =
                 this.restateEndpoint.handleDiscoveryRequest(request.getHeaders().get("accept"));
 
