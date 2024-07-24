@@ -7,10 +7,10 @@ import dev.restate.sdk.annotation.VirtualObject;
 import dev.restate.sdk.common.StateKey;
 
 @VirtualObject
-public class GreeterObject {
+public class Greeter {
 
     private static final StateKey<Integer> COUNT =
-            StateKey.of("available-drivers", JsonSerdes.INT);
+            StateKey.of("counter", JsonSerdes.INT);
 
     @Handler
     public String greet(ObjectContext ctx, String greeting) {
@@ -22,17 +22,6 @@ public class GreeterObject {
         ctx.set(COUNT, newCount);
 
         return String.format("%s %s, for the %d-th time", greeting, ctx.key(), newCount);
-    }
-
-    @Handler
-    public String ungreet(ObjectContext ctx) {
-        int count = ctx.get(COUNT).orElse(0);
-        if (count > 0) {
-            int newCount = count - 1;
-            ctx.set(COUNT, newCount);
-        }
-
-        return "Dear " + ctx.key() + ", taking one greeting back: " + count;
     }
 
 }
