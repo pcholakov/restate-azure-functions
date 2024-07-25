@@ -45,7 +45,7 @@ public class RestateAzureFnAdapter {
     }
 
     @FunctionName("restate")
-    public HttpResponseMessage handle(
+    public HttpResponseMessage run(
             @HttpTrigger(name = "req",
                     methods = {HttpMethod.GET, HttpMethod.POST},
                     authLevel = AuthorizationLevel.ANONYMOUS,
